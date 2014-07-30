@@ -1,11 +1,7 @@
 #!/usr/bin/perl
 use Benchmark;
 
-<<<<<<< HEAD
 my $LOG_FILE = 'E:/wwplugin_resin_log.2014_07_21';
-=======
-my $LOG_FILE = '/home/user/wwplugin_resin_log.2014_07_21';
->>>>>>> c60bfda87aa63e83ced56c1df1d95c1c4f06a83f
 
 my @EXT_LIST = map {qr/$_/} qw {
 	c.y.p.g.rds.service.RdsService
@@ -18,9 +14,6 @@ open LOG_FILE, $LOG_FILE;
 my $exit_flag = 0;
 
 while (<LOG_FILE>) {
-	# if($exit_flag){
-		# last;
-	# }
 	
 	foreach my $ext (@EXT_LIST) 
 	{
