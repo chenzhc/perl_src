@@ -4,15 +4,10 @@ use Encode;
 use Benchmark;
 use DateTime;
 
-my $LOG_FILE = 'e:/wwplugin_resin_log.2014_07_21';
-
-open LOG_FILE,'<:encoding(utf-8)', $LOG_FILE
-	or die "can't open file: $!";
-	
-my $exit_flag = 0;
-
-my  @list = Encode->encodings();
-#print "@list\n";
+if(@ARGV !=2){
+	print "Usage: sum_top_api_report.pl  infile_name out_filename\n";
+	exit ;
+}
 
 my $dt = DateTime->now; 
 my $hour   = $dt->hour;
@@ -21,6 +16,22 @@ my $second = $dt->second;
 my $hms_str = $dt->hms;
 $hms_str =~ s/://g;
 print "$hms_str\n";
+
+my $LOG_FILE = $ARGV[0];
+my $OUT_CSV_FILE_NAME = $ARGV[1]."_".$hms_str.".csv";
+my $API_REPORT_FILE;
+open LOG_FILE,'<:encoding(utf-8)', $LOG_FILE
+	or die "can't open file: $!";
+
+open $API_REPORT_FILE,'>:encoding(utf-8)',$OUT_CSV_FILE_NAME 
+	or die "can't write file: $!";
+	
+my $exit_flag = 0;
+
+my  @list = Encode->encodings();
+#print "@list\n";
+
+
 
 # print array item 
 sub print_arr{
@@ -93,16 +104,12 @@ while (<LOG_FILE>) {
 		}
 		$result++;
 	 }
-	 # if($result eq 200){
-		# last;
-	 # }
+	 if($result eq 20){
+		last;
+	 }
 }
 print "count result: $result \n";
 close LOG_FILE;
-
-my $API_REPORT_FILE;
-open $API_REPORT_FILE,'>:encoding(utf-8)',"../wwplugin_top_api_report_".$hms_str.".csv"
-	or die "can't write file: $!";
 	
 print $API_REPORT_FILE "API_NAME, SUM, mini_time, max_time \n";
 while ( ($key, $value) = each(%api_count_hash)){
