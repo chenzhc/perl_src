@@ -15,7 +15,9 @@ my  @list = Encode->encodings();
 #print "@list\n";
 
 my $dt = DateTime->now; 
-#print $dt->year."\n";
+my $hms_str = $dt->hms;
+$hms_str =~ s/://g;
+print "$hms_str\n";
 
 # print array item 
 sub print_arr{
@@ -35,29 +37,58 @@ sub print_arr{
 my $regex_api = 'action:\s+[\w|\.]*\s+methodName=\w*';
 my $result = 0;
 
-# if('hello there, neighbor' =~ /\s(\w+),/){
-    # print "that was ($`)($&)($') \n";
-    # print "that was (${^PREMATCH})(${^MATCH})(${^POSTMATCH}) \n";
-# }
-
 my %api_count_hash = ();
-
 my $cour_flag = 1;
+my $api_count_num = 0;
 
 while (<LOG_FILE>) {
 	 if($_ =~ /$regex_api/){
 		#print "$&\n";		
 		my @items = split(/\s+/,$&);
+		my @line_splite_arr = split(/\s+/,$_);
+		if($_ =~/ERROR/){
+			next;
+		}
 		#&print_arr(@items);
 		my $api_name = $items[1];
 		my $api_method_name = $items[2];
 		
 		my @mythoed_arr = split(/=/,$api_method_name);
 		#&print_arr(@mythoed_arr);
-		$api_name = $api_name.".".$mythoed_arr[1];
-		my $api_count_num = $api_count_hash{$api_name};
-		$api_count_num ++;
-		$api_count_hash{$api_name}=$api_count_num;
+		$api_name = $api_name.".".$mythoed_arr[1];	
+		my $report_str = $api_count_hash{$api_name};	
+		
+		my $consume = $line_splite_arr[-2];
+		if(!defined($consume)){
+			$consume = 0;
+		} elsif($consume>10000 or $consume<0){
+			next;
+		}
+		
+		my $mini_time = $consume;
+		my $max_time = $consume;
+		if(!defined($report_str)){
+			$api_count_num = 0;
+		}else {
+			@report_line_arr = split(",",$report_str);
+			$api_name = $report_line_arr[0];
+			$api_count_num = $report_line_arr[1];
+			$mini_time = $report_line_arr[2];
+			$max_time = $report_line_arr[3];
+			
+			if($mini_time>$consume){
+				$mini_time = $consume;
+			}
+			if($consume>$max_time){
+				$max_time = $consume;
+			}
+		}	
+		$api_count_num++;
+		
+		$report_str = join(",",$api_name,$api_count_num,$mini_time,$max_time);
+		#print "$report_str\n";
+		
+		$api_count_hash{$api_name}= $report_str;
 		
 		if($cour_flag==1){
 			print "|\b";
@@ -74,21 +105,17 @@ while (<LOG_FILE>) {
 }
 print "count result: $result \n";
 close LOG_FILE;
+print "end read file.\n";
 
-my $API_REPORT_FILE = "../wwplugin_api_report.csv";
-open $API_REPORT_FILE,'>:encoding(utf-8)',"../wwplugin_api_report.csv"
+my $API_REPORT_FILE;
+open $API_REPORT_FILE,'>:encoding(utf-8)',"../wwplugin_action_api_report".$hms_str.".csv"
 	or die "can't write file: $!";
 	
-print $API_REPORT_FILE "API_NAME, SUM \n";
+print $API_REPORT_FILE "API_NAME, SUM, mini_time, max_time \n";
 while ( ($key, $value) = each(%api_count_hash)){
-	print $API_REPORT_FILE "$key, $value\n";
+	print $API_REPORT_FILE "$value \n";
 }
 
 close $API_REPORT_FILE;
+print "end write report!\n";
 
-
-
-
-#my $sum_count = $result * 4;
-#print "sum count: $sum_count \n";
-print "end read file.\n";

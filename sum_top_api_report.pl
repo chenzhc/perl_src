@@ -36,31 +36,64 @@ sub print_arr{
 my $regex_api = 'api=\w*[\w|\.]*';
 my $result = 0;
 
-
 my %api_count_hash = ();
 
-my $cour_flag = 1;
+my $cursor_flag = 1;
+my $api_count_num = 0;
 
 while (<LOG_FILE>) {
-	 if($_ =~ /$regex_api/){
+	 if($_ =~ /$regex_api/){		
 		#print "$&\n";
+		my @line_splite_arr = split(/\s+/,$_);
 		my @items = split(/=/,$&);
-		#&print_arr(@items);
-		my $api_name = $items[1];
-		my $api_count_num = $api_count_hash{$api_name};
-		$api_count_num ++;
-		$api_count_hash{$api_name}=$api_count_num;
+		if($_ =~/ERROR/){
+			next;
+		}
+		#&print_arr(@line_splite_arr);
+		my $api_name = $items[1];		
+		my $report_str = $api_count_hash{$api_name};	
+		my $consume = $line_splite_arr[-2];
+		if(!defined($consume)){
+			$consume = 0;
+		} elsif($consume>10000 or $consume<0){
+			next;
+		}
 		
-		if($cour_flag==1){
+		my $mini_time = $consume;
+		my $max_time = $consume;
+		if(!defined($report_str)){
+			$api_count_num = 0;
+		}else {
+			@report_line_arr = split(",",$report_str);
+			$api_name = $report_line_arr[0];
+			$api_count_num = $report_line_arr[1];
+			$mini_time = $report_line_arr[2];
+			$max_time = $report_line_arr[3];
+			
+			if($mini_time>$consume){
+				$mini_time = $consume;
+			}
+			if($consume>$max_time){
+				$max_time = $consume;
+			}
+		}	
+		$api_count_num++;
+		
+		$report_str = join(",",$api_name,$api_count_num,$mini_time,$max_time);
+		#print "$report_str\n";
+		
+		$api_count_hash{$api_name}= $report_str;
+		
+		if($cursor_flag==1){
 			print "|\b";
-			$cour_flag =2;
+			$cursor_flag =2;
 		}else {
 			print "-\b";
-			$cour_flag =1;
+			$cursor_flag =1;
 		}
 		$result++;
 	 }
-	 # if($result eq 2){
+	 # if($result eq 200){
 		# last;
 	 # }
 }
@@ -71,9 +104,9 @@ my $API_REPORT_FILE;
 open $API_REPORT_FILE,'>:encoding(utf-8)',"../wwplugin_top_api_report_".$hms_str.".csv"
 	or die "can't write file: $!";
 	
-print $API_REPORT_FILE "API_NAME, SUM \n";
+print $API_REPORT_FILE "API_NAME, SUM, mini_time, max_time \n";
 while ( ($key, $value) = each(%api_count_hash)){
-	print $API_REPORT_FILE "$key, $value\n";
+	print $API_REPORT_FILE "$value \n";
 }
 
 close $API_REPORT_FILE;
