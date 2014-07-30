@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use Benchmark;
 
-my $LOG_FILE = 'E:/wwplugin_resin_log.2014_07_21';
+my $LOG_FILE = '../wwplugin_resin_log.2014_07_21';
 
 my @EXT_LIST = map {qr/$_/} qw {
 	c.y.p.g.rds.service.RdsService
