@@ -2,114 +2,119 @@
 use 5.010;
 use Encode;
 use Benchmark;
-use DateTime;
 
 if(@ARGV !=2){
-	print "Usage: sum_top_api_report.pl  infile_name out_filename\n";
+	print "Usage: sum_top_api_report.pl  log_dir_name  report_filename\n";
 	exit ;
 }
 
-my $dt = DateTime->now; 
-my $hour   = $dt->hour;
-my $minute = $dt->minute;
-my $second = $dt->second; 
-my $hms_str = $dt->hms;
-$hms_str =~ s/://g;
-print "$hms_str\n";
+sub currentTime{
+	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =  localtime(time);
+}
 
-my $LOG_FILE = $ARGV[0];
-my $OUT_CSV_FILE_NAME = $ARGV[1]."_".$hms_str.".csv";
-my $API_REPORT_FILE;
-open LOG_FILE,'<:encoding(utf-8)', $LOG_FILE
-	or die "can't open file: $!";
-
-open $API_REPORT_FILE,'>:encoding(utf-8)',$OUT_CSV_FILE_NAME 
-	or die "can't write file: $!";
-	
-my $exit_flag = 0;
-
-my  @list = Encode->encodings();
-#print "@list\n";
-
-
+&currentTime();
+$hms_str = "$hour$min$sec";
+print "start time: $hour:$min:$sec\n";
 
 # print array item 
 sub print_arr{
 	foreach my $item (@_)
-	{	
-		print encode('utf-8',$item)."\n";
+	{
+		print encode('gbk',$item)."\n";
 	}
 }
 
-#my $regex_api = 'c\.[\w|\.]*\s+-';
-#my $regex_api = '(api=\w*[\w|\.]*)|(action:\s+[\w|\.]*)';
-#my $regex_api = 'action:\s+[\w|\.]*\s+methodName=\w*';
-my $regex_api = 'api=\w*[\w|\.]*';
-my $result = 0;
+my  @list = Encode->encodings();
+#print "@list\n";
+		
+my $log_dir = $ARGV[0];
+my $LOG_DIR_HAND ;
+
+my $OUT_CSV_FILE_NAME = $ARGV[1]."_taobao_api_report_".$hms_str.".csv";
+my $API_REPORT_FILE;
+open $API_REPORT_FILE,'>:encoding(utf-8)',$OUT_CSV_FILE_NAME 
+	or die "can't write file: $!";
+
+opendir $LOG_DIR_HAND, $log_dir
+	or die "can't open log dir: $!";
 
 my %api_count_hash = ();
 
+my $regex_api = 'api=\w*[\w|\.]*';
+my $result = 0;
+my %api_count_hash = ();
 my $cursor_flag = 1;
 my $api_count_num = 0;
 
-while (<LOG_FILE>) {
-	 if($_ =~ /$regex_api/){		
-		#print "$&\n";
-		my @line_splite_arr = split(/\s+/,$_);
-		my @items = split(/=/,$&);
-		if($_ =~/ERROR/){
-			next;
-		}
-		#&print_arr(@line_splite_arr);
-		my $api_name = $items[1];		
-		my $report_str = $api_count_hash{$api_name};	
-		my $consume = $line_splite_arr[-2];
-		if(!defined($consume)){
-			$consume = 0;
-		} elsif($consume>10000 or $consume<0){
-			next;
-		}
-		
-		my $mini_time = $consume;
-		my $max_time = $consume;
-		if(!defined($report_str)){
-			$api_count_num = 0;
-		}else {
-			@report_line_arr = split(",",$report_str);
-			$api_name = $report_line_arr[0];
-			$api_count_num = $report_line_arr[1];
-			$mini_time = $report_line_arr[2];
-			$max_time = $report_line_arr[3];
+foreach $log_file (readdir $LOG_DIR_HAND){
+	next if $log_file =~ /^\./;
+	print "process $log_file ...";
+	my $log_file_path = "$log_dir/$log_file";
+	my $LOG_FILE_HAND;
+	
+	open $LOG_FILE_HAND,'<:encoding(utf-8)', $log_file_path
+		or die "can't open file: $!";		
+	while (<$LOG_FILE_HAND>) {
+		 if($_ =~ /$regex_api/){		
+			#print "$&\n";
+			my @line_splite_arr = split(/\s+/,$_);
+			my @items = split(/=/,$&);
+			if($_ =~/ERROR/){
+				next;
+			}
+			#&print_arr(@line_splite_arr);
+			my $api_name = $items[1];		
+			my $report_str = $api_count_hash{$api_name};	
+			my $consume = $line_splite_arr[-2];
+			if(!defined($consume)){
+				$consume = 0;
+			} elsif($consume>10000 or $consume<0){
+				next;
+			}
 			
-			if($mini_time>$consume){
-				$mini_time = $consume;
+			my $mini_time = $consume;
+			my $max_time = $consume;
+			if(!defined($report_str)){
+				$api_count_num = 0;
+			}else {
+				@report_line_arr = split(",",$report_str);
+				$api_name = $report_line_arr[0];
+				$api_count_num = $report_line_arr[1];
+				$mini_time = $report_line_arr[2];
+				$max_time = $report_line_arr[3];
+				
+				if($mini_time>$consume){
+					$mini_time = $consume;
+				}
+				if($consume>$max_time){
+					$max_time = $consume;
+				}
+			}	
+			$api_count_num++;
+			
+			$report_str = join(",",$api_name,$api_count_num,$mini_time,$max_time);
+			#print "$report_str\n";
+			
+			$api_count_hash{$api_name}= $report_str;
+			
+			if($cursor_flag==1){
+				print "|\b";
+				$cursor_flag =2;
+			}else {
+				print "-\b";
+				$cursor_flag =1;
 			}
-			if($consume>$max_time){
-				$max_time = $consume;
-			}
-		}	
-		$api_count_num++;
-		
-		$report_str = join(",",$api_name,$api_count_num,$mini_time,$max_time);
-		#print "$report_str\n";
-		
-		$api_count_hash{$api_name}= $report_str;
-		
-		if($cursor_flag==1){
-			print "|\b";
-			$cursor_flag =2;
-		}else {
-			print "-\b";
-			$cursor_flag =1;
-		}
-		$result++;
-	 }
-	 if($result eq 20){
-		last;
-	 }
+			$result++;
+		 }
+		 # if($result eq 20){
+			# last;
+		 # }
+	}
+	print "\n";
+	&currentTime();
+	print "count result: $result , time: $hour:$min:$sec\n";
+	close $LOG_FILE_HAND;	
 }
-print "count result: $result \n";
-close LOG_FILE;
 	
 print $API_REPORT_FILE "API_NAME, SUM, mini_time, max_time \n";
 while ( ($key, $value) = each(%api_count_hash)){
@@ -117,5 +122,7 @@ while ( ($key, $value) = each(%api_count_hash)){
 }
 
 close $API_REPORT_FILE;
-
 print "end read file.\n";
+
+&currentTime();
+print "end time: $hour:$min:$sec\n";
