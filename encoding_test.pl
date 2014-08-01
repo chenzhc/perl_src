@@ -1,4 +1,5 @@
-﻿#!/usr/bin/perl
+#!/usr/bin/perl
+
 
 use Encode;
 #use strict;
@@ -19,7 +20,7 @@ open $TEST_LOG_FILE,'<:encoding(utf-8)', '../test.log'
 	or die "can't open file: $!";
 
 while(<$TEST_LOG_FILE>){
-	print  encode("gbk",$_);
+	print  encode("utf-8",$_);
 }
 
 close $TEST_LOG_FILE;
