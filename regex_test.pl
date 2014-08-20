@@ -2,5 +2,11 @@
 
 $_ = 'a real \\ back';
 if(/\\/){
-	print " OK $_";
+	print " OK $_\n";
 }
+
+$_ = "Here is the text";
+@a = m/\b[^A-Z]+\b/g;
+print "@a\n";
+
+$s = "Here is the text";
